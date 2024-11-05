@@ -1,0 +1,18 @@
+[gd_scene load_steps=4 format=3 uid="uid://den4d2c0stnwp"]
+
+[ext_resource type="Script" path="res://player.gd" id="1_grpb8"]
+
+[sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_4bdar"]
+
+[sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_xit2s"]
+
+[node name="Player" type="Node"]
+script = ExtResource("1_grpb8")
+
+[node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="."]
+replication_config = SubResource("SceneReplicationConfig_4bdar")
+
+[node name="playerModel" type="Node" parent="."]
+
+[node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="playerModel"]
+replication_config = SubResource("SceneReplicationConfig_xit2s")
