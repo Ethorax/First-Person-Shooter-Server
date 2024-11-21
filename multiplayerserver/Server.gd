@@ -215,11 +215,13 @@ func damage_player(damage,to,from):
 func hit_player(damage,to,from):
 	rpc("damage_player",damage,to,from)
 	
-@rpc("any_peer")
-func frag(to,from):
+@rpc("any_peer","reliable")
+func frag(to,from = "1"):
 	print(from+ " fragged "+to)
 	
 	if from == "1":
+		get_node(to).kills -=1
+	elif from == to or from == null:
 		get_node(to).kills -=1
 	else:
 		get_node(from).kills +=1
@@ -233,7 +235,7 @@ func frag(to,from):
 		var most_frags = get_children()[0].kills
 		var most_index =0
 		for i in connected_peers_copy.size():
-			if get_children()[i].kills > most_frags:
+			if get_children()[i].kills >= most_frags:
 				most_frags = get_child(i).kills
 				most_index = i
 		
@@ -241,7 +243,7 @@ func frag(to,from):
 		sorted_names.append(connected_peer_usernames[most_index])
 		sorted_frags.append(get_child(most_index).kills)
 		connected_peers_copy.pop_at(most_index)
-		
+	Server.server_message(str(to)+ " was killed by "+str(from))
 			
 		
 	rpc("update_scoreboard",sorted_names,sorted_colors,sorted_frags)
@@ -255,3 +257,6 @@ func check_for_disconnects():
 			if multiplayer.get_peers().count(peer) <= 0:
 				print(str(peer)+ " kicked")
 				kick_player(peer)
+@rpc
+func server_message(message):
+	pass	
