@@ -1,0 +1,25 @@
+[gd_scene load_steps=3 format=3 uid="uid://den4d2c0stnwp"]
+
+[ext_resource type="Script" path="res://player.gd" id="1_t1g1f"]
+
+[sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_4bdar"]
+
+[node name="Player" type="Button"]
+script = ExtResource("1_t1g1f")
+
+[node name="playerModel" type="Node3D" parent="."]
+
+[node name="username" type="Node" parent="."]
+
+[node name="Camera3D" type="Node" parent="."]
+
+[node name="Chest" type="Node" parent="."]
+
+[node name="Sniper" type="Node" parent="."]
+
+[node name="Chest Animator" type="Node" parent="."]
+
+[node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="."]
+replication_config = SubResource("SceneReplicationConfig_4bdar")
+
+[connection signal="pressed" from="." to="." method="_on_pressed"]

@@ -1,7 +1,22 @@
-[gd_scene format=3 uid="uid://dwvgbf2txrbeo"]
+[gd_scene load_steps=2 format=3 uid="uid://dwvgbf2txrbeo"]
+
+[ext_resource type="Script" path="res://server_core.gd" id="1_nertn"]
 
 [node name="ServerCore" type="Node"]
+script = ExtResource("1_nertn")
 
 [node name="MultiplayerSpawner" type="MultiplayerSpawner" parent="."]
-_spawnable_scenes = PackedStringArray("res://player.tscn", "res://rocket.tscn")
+_spawnable_scenes = PackedStringArray("res://Objects/player.tscn", "res://rocket.tscn")
 spawn_path = NodePath("..")
+
+[node name="GridContainer" type="GridContainer" parent="."]
+offset_left = 96.0
+offset_top = 49.0
+offset_right = 1070.0
+offset_bottom = 600.0
+
+[node name="Timer" type="Timer" parent="."]
+wait_time = 5.0
+autostart = true
+
+[connection signal="timeout" from="Timer" to="." method="_on_timer_timeout"]
