@@ -211,7 +211,7 @@ func new_chat(player_name,text):
 func damage_player(damage,to,from):
 	pass
 
-@rpc("any_peer","call_local")
+@rpc("any_peer","call_local","reliable")
 func hit_player(damage,to,from):
 	rpc("damage_player",damage,to,from)
 	
