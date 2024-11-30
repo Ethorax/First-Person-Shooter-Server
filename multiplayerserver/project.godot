@@ -18,3 +18,7 @@ config/icon="res://icon.svg"
 [autoload]
 
 Server="*res://Server.gd"
+
+[global_group]
+
+Player=""

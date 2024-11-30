@@ -4,7 +4,7 @@
 
 [sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_4bdar"]
 
-[node name="Player" type="Button"]
+[node name="Player" type="Button" groups=["Player"]]
 script = ExtResource("1_t1g1f")
 
 [node name="playerModel" type="Node3D" parent="."]

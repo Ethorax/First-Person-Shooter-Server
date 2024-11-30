@@ -95,6 +95,7 @@ func send_player_data(player_id,color,username):
 	connected_peer_colors.append(color)
 	connected_peer_usernames.append(username)
 	print("Sent player data")
+	rpc("server_message", username + " joined the game")
 	rpc("update_colors",connected_peer_ids,connected_peer_colors)
 	#rpc("add_newly_connected_player_character", player_id)
 	#await get_tree().create_timer(1).timeout
@@ -150,7 +151,7 @@ func remove_player(player_id):
 		if int(connected_peer_ids[i]) ==  player_id:
 			connected_peer_ids.pop_at(i)
 			connected_peer_colors.pop_at(i)
-			connected_peer_usernames.pop_at(i)
+			rpc("server_message",str(connected_peer_usernames.pop_at(i)) + " left the game.")
 			break
 			
 @rpc
@@ -192,7 +193,8 @@ func kick_player(player_id):
 		if str(player_id) == str(connected_peer_ids[i]):
 			connected_peer_ids.pop_at(i)
 			connected_peer_colors.pop_at(i)
-			connected_peer_usernames.pop_at(i)
+			
+			rpc("server_message",str(connected_peer_usernames.pop_at(i)) + " left the game.")
 			break
 
 @rpc	
@@ -217,7 +219,7 @@ func hit_player(damage,to,from):
 	
 @rpc("any_peer","reliable")
 func frag(to,from = "1"):
-	print(from+ " fragged "+to)
+	print(get_username(from)+ " fragged "+get_username(to))
 	
 	if from == "1":
 		get_node(to).kills -=1
@@ -243,7 +245,7 @@ func frag(to,from = "1"):
 		sorted_names.append(connected_peer_usernames[most_index])
 		sorted_frags.append(get_child(most_index).kills)
 		connected_peers_copy.pop_at(most_index)
-	Server.server_message(str(to)+ " was killed by "+str(from))
+	rpc("server_message",(get_username(str(to))+ " was killed by "+get_username(str(from))))
 			
 		
 	rpc("update_scoreboard",sorted_names,sorted_colors,sorted_frags)
@@ -257,6 +259,13 @@ func check_for_disconnects():
 			if multiplayer.get_peers().count(peer) <= 0:
 				print(str(peer)+ " kicked")
 				kick_player(peer)
+				
 @rpc
 func server_message(message):
 	pass	
+
+func get_username(player_id):
+	for player in get_children():
+		if player.is_in_group("Player") and player.name == str(player_id):
+			return player.username
+	return "no name"		
