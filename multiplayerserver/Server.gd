@@ -12,11 +12,38 @@ var connected_peer_colors = []
 var most_recent_username
 var most_recent_color
 
+#map variables
+var maps = []
+var map_index = 0
 
-#Game Variables
-var map_name : String = "DefaultDM"
+#Config Variables
+var motd 
+var game_mode
+var timed
+var kill_limit
+
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
+	
+	
+	var config = ConfigFile.new()
+
+	# Load data from a file.
+	var err = config.load("res://server.cfg")
+	if err != OK:
+		return
+	
+	motd = config.get_value("Settings","motd")
+	game_mode = config.get_value("Settings","game_mode")
+	timed = config.get_value("Settings","timed")
+	kill_limit = config.get_value("Settings","kill_limit")
+	
+	var map_list = config.get_value("Settings","maps")
+	for map in map_list.split(","):
+		maps.append(map)
+		
+	print(maps)
+	
 	network.peer_connected.connect(Peer_Connected)
 	network.peer_disconnected.connect(Peer_Disconnected)
 	multiplayer.peer_connected.connect(Peer_Connected)
@@ -59,7 +86,7 @@ func start_server():
 #@rpc("any_peer")
 func Peer_Connected(player_id):
 	print("User "+str(player_id)+" connected")
-	rpc_id(player_id,"recieve_map",map_name)
+	rpc_id(player_id,"recieve_map",maps[map_index])
 	
 	#rpc_id(player_id,"recieve_player_data")
 	
@@ -169,6 +196,8 @@ func knockback_player(player_id):
 @rpc
 func update_colors(player_ids,player_colors):
 	pass
+
+#PROJECTILE CODE
 	
 @rpc("any_peer")
 func send_rocket(direction, position,target,fly_direction,player_name):
@@ -185,6 +214,10 @@ func send_fireball(direction, position,target,fly_direction,player_name):
 	print(direction)
 	rpc("send_fireball",direction, position,target,fly_direction,player_name)
 
+@rpc("any_peer")
+func send_energy(direction, position,target,fly_direction,player_name):
+	print(direction)
+	rpc("send_energy",direction, position,target,fly_direction,player_name)
 
 func kick_player(player_id):
 	rpc("remove_other_player",str(player_id))
@@ -249,6 +282,9 @@ func frag(to,from = "1"):
 			
 		
 	rpc("update_scoreboard",sorted_names,sorted_colors,sorted_frags)
+	
+	if sorted_frags[0] >= kill_limit:
+		change_map()
 
 @rpc
 func update_scoreboard(name_array,color_array,frag_array):
@@ -269,3 +305,23 @@ func get_username(player_id):
 		if player.is_in_group("Player") and player.name == str(player_id):
 			return player.username
 	return "no name"		
+
+
+
+#MAP CHANGING CODE
+func change_map():
+	#Reset Score
+	
+	for child in get_children():
+		if child.is_in_group("Player"):
+			child.kills = 0
+			
+	map_index+=1
+	if map_index >= maps.size():
+		map_index = 0
+		
+	rpc("map_change",maps[map_index])	
+	
+@rpc
+func map_change(map : String):
+	pass
