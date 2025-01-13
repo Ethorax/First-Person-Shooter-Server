@@ -15,13 +15,14 @@ var most_recent_color
 #map variables
 var maps = []
 var map_index = 0
-
+var first_blood = true
 #Config Variables
 var motd 
 var game_mode
 var timed
 var kill_limit
 
+var end_of_game = false
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
 	
@@ -37,6 +38,7 @@ func _ready() -> void:
 	game_mode = config.get_value("Settings","game_mode")
 	timed = config.get_value("Settings","timed")
 	kill_limit = config.get_value("Settings","kill_limit")
+	port = config.get_value("Settings","port")
 	
 	var map_list = config.get_value("Settings","maps")
 	for map in map_list.split(","):
@@ -124,6 +126,7 @@ func send_player_data(player_id,color,username):
 	print("Sent player data")
 	rpc("server_message", username + " joined the game")
 	rpc("update_colors",connected_peer_ids,connected_peer_colors)
+	sort_players()
 	#rpc("add_newly_connected_player_character", player_id)
 	#await get_tree().create_timer(1).timeout
 	#add_player_character(player_id)
@@ -152,6 +155,8 @@ func add_player_character(peer_id):
 	#player_character.text = username
 	add_child(player_character)
 	connected_peer_ids.append(peer_id)
+	
+	
 	#rpc("update_colors", peer_id)
 	#print("Adding player: "+str(peer_id)+" With color: "+ str(color))
 		
@@ -254,40 +259,51 @@ func hit_player(damage,to,from):
 func frag(to,from = "1"):
 	print(get_username(from)+ " fragged "+get_username(to))
 	
+	
+	if get_node_or_null(to):
+		get_node(to).killstreak = 0
+	
+	
 	if from == "1":
 		get_node(to).kills -=1
+		get_node(to).killstreak = 0
 	elif from == to or from == null:
 		get_node(to).kills -=1
+		get_node(to).killstreak = 0
 	else:
 		get_node(from).kills +=1
-	
-	var connected_peers_copy = connected_peer_ids.duplicate(true)
-	var sorted_frags = []
-	var sorted_names = []
-	var sorted_colors = []
-	
-	while connected_peers_copy.size() > 0:
-		var most_frags = get_children()[0].kills
-		var most_index =0
-		for i in connected_peers_copy.size():
-			if get_children()[i].kills >= most_frags:
-				most_frags = get_child(i).kills
-				most_index = i
+		get_node(from).killstreak += 1
+		if first_blood:
+			send_sound("first_blood",0,true)
+			first_blood = false
+	if from != "1":
+		get_node(from).get_node("kill_timer").start(5.0)
+		get_node(from).rapid_killstreak += 1
+		if get_node(from).killstreak == 5:
+			send_sound("killing_spree",0,true)
+			rpc("server_message", str(get_username(from))+" is on a killing spree.")
+		if get_node(from).killstreak == 10:
+			send_sound("unkillable",0,true)
+			rpc("server_message", str(get_username(from))+" is unkillable!")
+		if get_node(from).killstreak == 15:
+			send_sound("domination",0,true)
+			rpc("server_message", str(get_username(from))+" is dominating!!!")
+		if get_node(from).rapid_killstreak == 2:
+			send_sound("double_kill",int(from),false)
+		if get_node(from).rapid_killstreak == 3:
+			send_sound("triple_kill",int(from),false)
 		
-		sorted_colors.append(connected_peer_colors[most_index])
-		sorted_names.append(connected_peer_usernames[most_index])
-		sorted_frags.append(get_child(most_index).kills)
-		connected_peers_copy.pop_at(most_index)
-	rpc("server_message",(get_username(str(to))+ " was killed by "+get_username(str(from))))
 			
+		rpc("server_message",(get_username(str(to))+ " was killed by "+get_username(str(from))))
 		
-	rpc("update_scoreboard",sorted_names,sorted_colors,sorted_frags)
+		if get_node(from).kills == kill_limit - 1:
+			send_sound("game_point",0,true)
+			rpc("server_message",get_username(str(from))+" is about to win.")
 	
-	if sorted_frags[0] >= kill_limit:
-		change_map()
+	sort_players()
 
 @rpc
-func update_scoreboard(name_array,color_array,frag_array):
+func update_scoreboard(name_array,color_array,frag_array,killstreak_array):
 	pass
 
 func check_for_disconnects():
@@ -311,17 +327,79 @@ func get_username(player_id):
 #MAP CHANGING CODE
 func change_map():
 	#Reset Score
+	send_sound("game",0,true)
 	
-	for child in get_children():
-		if child.is_in_group("Player"):
-			child.kills = 0
 			
 	map_index+=1
 	if map_index >= maps.size():
 		map_index = 0
 		
-	rpc("map_change",maps[map_index])	
+	rpc("map_change",maps[map_index])
+	
+	
+		
+	#for player in get_children():
+		#if player.is_in_group("Player"):
+			#rpc_id(player.get_multiplayer_authority(),"kill_player",player.get_multiplayer_authority())
+	end_of_game = true
+	await get_tree().create_timer(15).timeout
+	end_of_game = false
+	for child in get_children():
+		if child.is_in_group("Player"):
+			child.kills = 0
 	
 @rpc
 func map_change(map : String):
 	pass
+
+
+#domination,double_kill,first_blood,game_point
+func send_sound(sound : String, player_id : int, to_all : bool = false):
+	if to_all:
+		rpc("play_sound",sound)
+	else:
+		rpc_id(player_id,"play_sound",sound)
+	
+@rpc
+func play_sound(sound : String, to_all : bool = false):
+	pass
+
+
+func sort_players():
+	var connected_peers_copy = connected_peer_ids.duplicate(true)
+	var sorted_frags = []
+	var sorted_names = []
+	var sorted_colors = []
+	var sorted_killstreaks = []
+	
+	while connected_peers_copy.size() > 0:
+		#var most_frags = get_children()[0].kills
+		var most_frags = -99
+		var most_index = 0
+		var array_index= 0
+		for peer in connected_peers_copy:
+			
+			if get_node(str(peer)).kills >= most_frags:
+				most_frags = get_node(str(peer)).kills
+				most_index = get_node(str(peer)).get_index()
+				array_index = connected_peers_copy.find(peer)
+			
+			#if get_children()[i].kills >= most_frags:
+				#most_frags = get_child(i).kills
+				#most_index = i
+		#print(most_index)
+		sorted_colors.append(connected_peer_colors[most_index])
+		sorted_names.append(connected_peer_usernames[most_index])
+		sorted_frags.append(get_child(most_index).kills)
+		sorted_killstreaks.append(get_child(most_index).killstreak)
+		
+		connected_peers_copy.pop_at(array_index)
+	
+			
+		
+	rpc("update_scoreboard",sorted_names,sorted_colors,sorted_frags,sorted_killstreaks)
+	
+	
+	
+	if sorted_frags[0] >= kill_limit and !end_of_game:
+		change_map()

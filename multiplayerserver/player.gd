@@ -5,7 +5,8 @@ var username = "Default"
 var color : Color = Color.RED
 var kills = 0	
 var deaths = 0
-
+var killstreak = 0
+var rapid_killstreak = 0
 
 
 
@@ -18,3 +19,7 @@ func _ready():
 func _on_pressed() -> void:
 	Server.kick_player(name)
 	queue_free()
+
+
+func _on_kill_timer_timeout() -> void:
+	rapid_killstreak = 0
